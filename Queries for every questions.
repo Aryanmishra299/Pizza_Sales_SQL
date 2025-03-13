@@ -1,0 +1,121 @@
+CREATE DATABASE pizzaHut;
+
+--                                        Basic questions solution
+
+-- Question1 :- Retrieve the total number of orders placed.
+Select COUNT(order_id) as total_orders From orders;
+
+-- Question2 :- Calculate the total revenue generated from pizza sales.
+SELECT round(SUM(order_details.quantity * pizzas.price),2) as total_sales From order_details JOIN pizzas 
+ON order_details.pizza_id = pizzas.pizza_id;
+
+-- Question3 :- Identify the highest-priced pizza.
+
+SELECT pizza_types.name , pizzas.price
+FROM pizzas JOIN pizza_types
+ON pizzas.pizza_type_id = pizza_types.pizza_type_id
+ORDER BY pizzas.price DESC LIMIT 1;
+
+-- Question4 :- Identify the most common pizza size ordered.
+SELECT COUNT(order_details.quantity) as order_cont, pizzas.size
+FROM order_details JOIN pizzas
+ON order_details.pizza_id = pizzas.pizza_id
+GROUP BY pizzas.size ORDER BY order_cont DESC;
+
+-- Question5 :-List the top 5 most ordered pizza types along with their quantities.
+
+-- COUNT(column_name)	Counts the number of rows	If we want to count how many times a pizza was ordered (ignoring quantity).
+SELECT 
+    pizza_types.name AS pizza_name,
+    COUNT(order_details.quantity) AS total_orders
+FROM
+    pizzas
+        JOIN
+    pizza_types ON pizzas.pizza_type_id = pizza_types.pizza_type_id
+        JOIN
+    order_details ON pizzas.pizza_id = order_details.pizza_id
+GROUP BY pizza_name
+ORDER BY total_orders DESC
+LIMIT 5;
+
+--                                                        Intermediate:
+
+-- Question1 :- Join the necessary tables to find the total quantity of each pizza category ordered.
+
+-- SUM(column_name)	Sums up the values in a column	If we want the total quantity of pizzas ordered, considering multiple pizzas in a single order.
+SELECT pizza_types.category as Category, SUM(order_details.quantity) as total_orders
+FROM pizzas 
+JOIN pizza_types ON pizzas.pizza_type_id = pizza_types.pizza_type_id
+JOIN order_details ON pizzas.pizza_id = order_details.pizza_id
+GROUP BY Category ORDER BY total_orders DESC;
+
+-- Question2 :- Determine the distribution of orders by hour of the day.
+SELECT HOUR(orders.order_time) as Hour , COUNT(order_id) as order_count 
+FROM orders 
+GROUP BY Hour 
+ORDER BY Hour ASC;
+
+-- Question3 :- Join relevant tables to find the number of pizzas in evey category of pizzas.
+SELECT pizza_types.category as Category, COUNT(pizza_types.name) as pizzas_count
+FROM pizza_types GROUP BY Category;
+
+-- Question4 :- Group the orders by date and calculate the average number of pizzas ordered per day.  ?????
+
+SELECT round(AVG (Quantity_count), 0)
+FROM 
+(SELECT orders.order_date, SUM(order_details.quantity) as Quantity_count
+FROM orders JOIN order_details
+ON orders.order_id = order_details.order_id
+GROUP BY orders.order_date) as orderByDate;
+
+-- Question5 :- Determine the top 3 most ordered pizza types based on revenue.
+
+SELECT pizza_types.name as NAme, SUM(order_details.quantity * pizzas.price) as pizza_revenue
+FROM pizzas 
+JOIN pizza_types ON pizzas.pizza_type_id = pizza_types.pizza_type_id
+JOIN order_details ON pizzas.pizza_id = order_details.pizza_id
+GROUP BY NAme ORDER BY pizza_revenue DESC LIMIT 3;
+
+--                                   Advance
+
+-- Question5 :- Calculate the percentage contribution of each pizza type to total revenue.
+
+SELECT pizza_types.category as Category, 
+round(SUM(order_details.quantity * pizzas.price) / 
+(SELECT  round(SUM(order_details.quantity * pizzas.price),2) as total_sales 
+From order_details JOIN pizzas
+ON order_details.pizza_id = pizzas.pizza_id) * 100 , 2) as percent
+FROM pizzas 
+JOIN pizza_types ON pizzas.pizza_type_id = pizza_types.pizza_type_id
+JOIN order_details ON pizzas.pizza_id = order_details.pizza_id
+GROUP BY Category;
+
+-- Question2 :- Analyze the cumulative revenue generated over time.
+SELECT order_date, revenue, SUM(revenue) OVER(ORDER BY order_date) as cummulative_revenue
+FROM(
+SELECT orders.order_date , SUM(order_details.quantity * pizzas.price) as revenue
+FROM order_details
+JOIN orders ON orders.order_id = order_details.order_id
+JOIN pizzas ON pizzas.pizza_id = order_details.pizza_id
+GROUP BY orders.order_date) as onlydate_revenue;
+
+-- Question3 :- Determine the top 3 most ordered pizza types based on revenue for each pizza category.
+
+SELECT name, revenue FROM
+(SELECT category, name, revenue,rank() over(partition by category order by revenue desc) as ranked
+FROM
+(SELECT pizza_types.category, pizza_types.name, SUM(order_details.quantity * pizzas.price) as revenue
+FROM pizza_types
+JOIN pizzas ON pizza_types.pizza_type_id = pizzas.pizza_type_id
+JOIN order_details ON order_details.pizza_id = pizzas.pizza_id
+GROUP BY pizza_types.category, pizza_types.name) as a) as b
+WHERE ranked <= 3;
+
+
+
+
+
+
+
+
+
